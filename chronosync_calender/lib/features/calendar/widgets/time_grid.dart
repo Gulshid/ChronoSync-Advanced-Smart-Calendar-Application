@@ -325,7 +325,7 @@ class _DayColumn extends StatelessWidget {
       height: height - 2,
       left: p.column * columnWidth + 2,
       width: columnWidth - 4,
-      child: _TimeBlock(controller: controller, occurrence: occ, compact: height < 40),
+      child: _TimeBlock(controller: controller, occurrence: occ, height: height - 2),
     );
   }
 
@@ -348,11 +348,11 @@ class _DayColumn extends StatelessWidget {
 }
 
 class _TimeBlock extends StatelessWidget {
-  const _TimeBlock({required this.controller, required this.occurrence, required this.compact});
+  const _TimeBlock({required this.controller, required this.occurrence, required this.height});
 
   final CalendarController controller;
   final Occurrence occurrence;
-  final bool compact;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -360,6 +360,13 @@ class _TimeBlock extends StatelessWidget {
     final cs = theme.colorScheme;
     final color = eventColor(controller, occurrence.event);
     final title = occurrence.event.title.isEmpty ? Strings.t('no_title') : occurrence.event.title;
+    final showTime = height >= 52;
+
+    // Count how many title lines fit, allowing for the text size setting.
+    final titleFontSize = theme.textTheme.labelMedium?.fontSize ?? 12;
+    final lineHeight = titleFontSize * 1.4 * MediaQuery.textScalerOf(context).scale(1);
+    final lines = ((height - 6) / lineHeight).floor();
+    final maxLines = clampInt(lines - (showTime ? 1 : 0), 1, 3);
 
     return Semantics(
       label: '$title, ${timeRangeLabel(occurrence)}',
@@ -373,21 +380,23 @@ class _TimeBlock extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(border: Border(left: BorderSide(color: color, width: 3))),
             padding: const EdgeInsets.fromLTRB(6, 3, 4, 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: compact ? 1 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.onSurface),
-                ),
-                if (!compact)
-                  Text(
-                    AppFormat.time(occurrence.start),
-                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            alignment: Alignment.topLeft,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: title,
+                    style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.onSurface),
                   ),
-              ],
+                  if (showTime)
+                    TextSpan(
+                      text: '\n${AppFormat.time(occurrence.start)}',
+                      style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                ],
+              ),
+              maxLines: maxLines,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),

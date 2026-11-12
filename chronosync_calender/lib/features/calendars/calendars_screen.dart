@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/calendar_model.dart';
+import '../../l10n/strings.dart';
 import '../../state/calendar_controller.dart';
 import 'calendar_editor_sheet.dart';
 
@@ -20,12 +21,12 @@ class CalendarsScreen extends StatelessWidget {
         final calendars = controller.calendars;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Calendars')),
+          appBar: AppBar(title: Text(Strings.t('calendars_title'))),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.sm, AppSpace.lg, 96),
             children: [
               Text(
-                'Hidden calendars stay saved. Their events just stop showing.',
+                Strings.t('calendars_hint'),
                 style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpace.lg),
@@ -48,9 +49,10 @@ class CalendarsScreen extends StatelessWidget {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'calendars_fab',
             onPressed: () => _create(context),
             icon: const Icon(Icons.add),
-            label: const Text('New calendar'),
+            label: Text(Strings.t('new_calendar')),
           ),
         );
       },
@@ -85,7 +87,7 @@ class _CalendarRow extends StatelessWidget {
         decoration: BoxDecoration(color: Color(calendar.colorValue), shape: BoxShape.circle),
       ),
       title: Text(calendar.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-      subtitle: calendar.isDefault ? const Text('Default calendar') : null,
+      subtitle: calendar.isDefault ? Text(Strings.t('default_calendar')) : null,
       onTap: () => _edit(context),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -95,14 +97,14 @@ class _CalendarRow extends StatelessWidget {
             onChanged: (_) => controller.toggleCalendar(calendar.id),
           ),
           PopupMenuButton<String>(
-            tooltip: 'More',
+            tooltip: Strings.t('more'),
             onSelected: (value) => value == 'edit' ? _edit(context) : _confirmDelete(context),
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(value: 'edit', child: Text(Strings.t('edit'))),
               if (!calendar.isDefault)
                 PopupMenuItem(
                   value: 'delete',
-                  child: Text('Delete', style: TextStyle(color: theme.colorScheme.error)),
+                  child: Text(Strings.t('delete'), style: TextStyle(color: theme.colorScheme.error)),
                 ),
             ],
           ),
@@ -126,14 +128,17 @@ class _CalendarRow extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Delete ${calendar.name}?'),
-        content: const Text('All events in this calendar will be deleted. This cannot be undone.'),
+        title: Text(Strings.t('delete_calendar_title', {'name': calendar.name})),
+        content: Text(Strings.t('delete_calendar_msg')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(Strings.t('cancel')),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: cs.error),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete'),
+            child: Text(Strings.t('delete')),
           ),
         ],
       ),

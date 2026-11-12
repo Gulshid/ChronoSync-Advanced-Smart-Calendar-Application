@@ -47,6 +47,7 @@ class CalendarScreen extends StatelessWidget {
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'calendar_fab',
             onPressed: () => openQuickAdd(context, controller),
             icon: const Icon(Icons.bolt),
             label: Text(Strings.t('new_event')),
