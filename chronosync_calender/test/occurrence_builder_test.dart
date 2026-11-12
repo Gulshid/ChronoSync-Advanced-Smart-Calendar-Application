@@ -1,7 +1,7 @@
-import 'package:chronosync/data/models/event_model.dart';
-import 'package:chronosync/data/models/occurrence.dart';
-import 'package:chronosync/data/recurrence/occurrence_builder.dart';
-import 'package:chronosync/data/recurrence/recurrence_rule.dart';
+
+import 'package:chronosync_calender/data/models/event_model.dart';
+import 'package:chronosync_calender/data/recurrence/occurrence_builder.dart';
+import 'package:chronosync_calender/data/recurrence/recurrence_rule.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 EventModel _series(String rrule, DateTime start, {Duration length = const Duration(hours: 1)}) => EventModel(

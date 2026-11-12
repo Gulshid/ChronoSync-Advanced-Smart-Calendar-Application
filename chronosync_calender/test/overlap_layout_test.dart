@@ -1,6 +1,6 @@
-import 'package:chronosync/data/models/event_model.dart';
-import 'package:chronosync/data/models/occurrence.dart';
-import 'package:chronosync/features/calendar/widgets/overlap_layout.dart';
+import 'package:chronosync_calender/data/models/event_model.dart';
+import 'package:chronosync_calender/data/models/occurrence.dart';
+import 'package:chronosync_calender/features/calendar/widgets/overlap_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _event = EventModel(

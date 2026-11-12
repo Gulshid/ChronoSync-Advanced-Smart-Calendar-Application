@@ -117,6 +117,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
       from: series.start,
       to: occ.originalStart,
     ).length;
+    // ignore: unnecessary_non_null_assertion
     return rule!.count! - before;
   }
 

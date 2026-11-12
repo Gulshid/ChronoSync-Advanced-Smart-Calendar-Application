@@ -29,11 +29,12 @@ class CalendarsScreen extends StatelessWidget {
                 style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpace.lg),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: cs.surface,
+              Material(
+                color: cs.surface,
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+                  side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   children: [

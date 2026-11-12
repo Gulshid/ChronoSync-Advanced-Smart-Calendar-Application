@@ -1,4 +1,4 @@
-import 'package:chronosync/data/recurrence/recurrence_rule.dart';
+import 'package:chronosync_calender/data/recurrence/recurrence_rule.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
