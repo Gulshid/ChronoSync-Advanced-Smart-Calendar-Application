@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:chronosync_calender/core/utils/app_format.dart';
-import 'package:chronosync_calender/core/l10n/strings.dart';
 
+import 'package:chronosync_calender/core/l10n/strings.dart';
 import 'package:chronosync_calender/core/theme/app_theme.dart';
+import 'package:chronosync_calender/core/utils/app_format.dart';
 import 'package:chronosync_calender/core/utils/date_helpers.dart';
 import 'package:chronosync_calender/data/models/occurrence.dart';
-import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
-import 'package:chronosync_calender/features/events/view/event_actions.dart';
 import 'package:chronosync_calender/features/calendar/view/event_tile.dart';
 import 'package:chronosync_calender/features/calendar/view/overlap_layout.dart';
+import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
+import 'package:chronosync_calender/features/events/view/event_actions.dart';
 
 const double _hourHeight = 60;
 const double _gutterWidth = 52;
@@ -62,7 +62,7 @@ class _TimeGridState extends State<TimeGrid> {
 
     return Column(
       children: [
-        _DayHeader(days: days),
+        _DayHeader(controller: controller, days: days),
         if (allDay.isNotEmpty) _AllDayLane(controller: controller, days: days, items: allDay),
         const Divider(height: 1),
         Expanded(
@@ -87,49 +87,57 @@ class _TimeGridState extends State<TimeGrid> {
 }
 
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.days});
+  const _DayHeader({required this.controller, required this.days});
 
+  final CalendarViewModel controller;
   final List<DateTime> days;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isWeek = days.length > 1;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.xs),
       child: Row(
         children: [
           const SizedBox(width: _gutterWidth),
           for (final day in days)
             Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    DateFormat.E().format(day).toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isToday(day) ? cs.primary : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${day.day}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: isToday(day) ? cs.onPrimary : cs.onSurface,
+              child: InkWell(
+                // In week view, tapping a day header opens that day.
+                onTap: isWeek ? () => controller.openDay(day) : null,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Column(
+                  children: [
+                    Text(
+                      DateFormat.E().format(day).toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isToday(day) ? cs.primary : cs.onSurfaceVariant,
                         fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isToday(day) ? cs.primary : Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${day.day}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: isToday(day) ? cs.onPrimary : cs.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -149,7 +157,7 @@ class _AllDayLane extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpace.sm),
+      padding: const EdgeInsets.only(top: AppSpace.xs, bottom: AppSpace.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -300,9 +308,10 @@ class _DayColumn extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _GridPainter(color: cs.outlineVariant.withValues(alpha: 0.35)),
+                  painter: _GridPainter(color: cs.outlineVariant.withValues(alpha: 0.3)),
                 ),
               ),
+              if (isToday(day)) Positioned.fill(child: ColoredBox(color: cs.primary.withValues(alpha: 0.03))),
               for (final p in placed) _placedBlock(ctx, p, width),
               if (isToday(day)) _nowIndicator(now, cs.primary),
             ],
@@ -372,7 +381,7 @@ class _TimeBlock extends StatelessWidget {
       label: '$title, ${timeRangeLabel(occurrence)}',
       button: true,
       child: Material(
-        color: color.withValues(alpha: 0.16),
+        color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(AppRadius.sm),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

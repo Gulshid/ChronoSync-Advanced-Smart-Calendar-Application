@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:chronosync_calender/core/utils/app_format.dart';
-import 'package:chronosync_calender/core/l10n/strings.dart';
 
-import 'package:chronosync_calender/core/utils/calendar_palette.dart';
+import 'package:chronosync_calender/core/l10n/strings.dart';
 import 'package:chronosync_calender/core/theme/app_theme.dart';
+import 'package:chronosync_calender/core/utils/app_format.dart';
+import 'package:chronosync_calender/core/utils/calendar_palette.dart';
 import 'package:chronosync_calender/data/models/event_model.dart';
 import 'package:chronosync_calender/data/models/occurrence.dart';
 import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
@@ -19,7 +19,7 @@ String timeRangeLabel(Occurrence occ) {
   return AppFormat.range(occ.start, occ.end);
 }
 
-/// Card used in lists (agenda view). Shows time, title, location and calendar.
+/// Card used in lists (agenda, day panel, search). Shows a colour bar, title, time, location and calendar.
 class EventTile extends StatelessWidget {
   const EventTile({
     super.key,
@@ -41,64 +41,75 @@ class EventTile extends StatelessWidget {
     final event = occurrence.event;
     final subdued = theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant);
 
-    return Material(
-      color: cs.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 4,
-                height: 44,
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(width: AppSpace.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.title.isEmpty ? Strings.t('no_title') : event.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
+    return Semantics(
+      button: true,
+      label: '${event.title}, ${timeRangeLabel(occurrence)}',
+      child: Material(
+        color: cs.surface,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.45)),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 4, color: color),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.md, AppSpace.md, AppSpace.sm, AppSpace.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(child: Text(timeRangeLabel(occurrence), style: subdued)),
-                        if (occurrence.isRecurring) ...[
-                          const SizedBox(width: 6),
-                          Icon(Icons.repeat, size: 14, color: cs.onSurfaceVariant),
+                        Text(
+                          event.title.isEmpty ? Strings.t('no_title') : event.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: AppSpace.xs),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule, size: 14, color: cs.onSurfaceVariant),
+                            const SizedBox(width: 4),
+                            Flexible(child: Text(timeRangeLabel(occurrence), style: subdued)),
+                            if (occurrence.isRecurring) ...[
+                              const SizedBox(width: 6),
+                              Icon(Icons.repeat, size: 14, color: cs.onSurfaceVariant),
+                            ],
+                          ],
+                        ),
+                        if (event.location.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.place_outlined, size: 14, color: cs.onSurfaceVariant),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(event.location, maxLines: 1, overflow: TextOverflow.ellipsis, style: subdued),
+                              ),
+                            ],
+                          ),
                         ],
                       ],
                     ),
-                    if (event.location.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.place_outlined, size: 14, color: cs.onSurfaceVariant),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(event.location, maxLines: 1, overflow: TextOverflow.ellipsis, style: subdued),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpace.sm),
-              Text(calendarName, style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-            ],
+                if (calendarName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, AppSpace.md, AppSpace.md, 0),
+                    child: Text(
+                      calendarName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

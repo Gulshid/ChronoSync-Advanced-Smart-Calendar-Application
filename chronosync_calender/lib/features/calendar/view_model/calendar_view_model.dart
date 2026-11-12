@@ -129,6 +129,13 @@ class CalendarViewModel extends ChangeNotifier {
     reload();
   }
 
+  /// Moves the focus to [day] and keeps the current view mode (used by the header date picker).
+  void jumpTo(DateTime day) {
+    _focus = startOfDay(day);
+    notifyListeners();
+    reload();
+  }
+
   void goToday() {
     _focus = startOfDay(DateTime.now());
     notifyListeners();

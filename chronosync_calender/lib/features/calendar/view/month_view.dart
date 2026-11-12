@@ -1,22 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:chronosync_calender/core/l10n/strings.dart';
 
+import 'package:chronosync_calender/core/l10n/strings.dart';
 import 'package:chronosync_calender/core/theme/app_theme.dart';
 import 'package:chronosync_calender/core/utils/date_helpers.dart';
 import 'package:chronosync_calender/data/models/occurrence.dart';
-import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
 import 'package:chronosync_calender/features/calendar/view/event_tile.dart';
+import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
+import 'package:chronosync_calender/features/events/view/event_actions.dart';
 
-class MonthView extends StatelessWidget {
+/// Month grid. Tap a day to preview its events below; use "Open day" to go to the day view.
+class MonthView extends StatefulWidget {
   const MonthView({super.key, required this.controller});
 
   final CalendarViewModel controller;
 
   @override
+  State<MonthView> createState() => _MonthViewState();
+}
+
+class _MonthViewState extends State<MonthView> {
+  late DateTime _selected = _initialSelection();
+
+  /// Today when it is in the month on screen, otherwise the first focused day.
+  DateTime _initialSelection() {
+    final focus = widget.controller.focusDate;
+    final now = DateTime.now();
+    final inMonth = now.year == focus.year && now.month == focus.month;
+    return startOfDay(inMonth ? now : focus);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final controller = widget.controller;
     final focus = controller.focusDate;
     final gridStart = startOfWeek(DateTime(focus.year, focus.month, 1), controller.firstWeekday);
     final weeks = [
@@ -25,46 +43,60 @@ class MonthView extends StatelessWidget {
 
     return Column(
       children: [
-        Row(
-          children: [
-            for (var i = 0; i < 7; i++)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
-                  child: Text(
-                    DateFormat.E().format(addDays(gridStart, i)).toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        Expanded(
-          child: Column(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
+          child: Row(
             children: [
-              for (final week in weeks)
+              for (var i = 0; i < 7; i++)
                 Expanded(
-                  child: Row(
-                    children: [
-                      for (final day in week)
-                        Expanded(
-                          child: _DayCell(
-                            controller: controller,
-                            day: day,
-                            inMonth: day.month == focus.month,
-                            occurrences: controller.occurrencesOn(day),
-                          ),
-                        ),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
+                    child: Text(
+                      DateFormat.E().format(addDays(gridStart, i)).toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ),
             ],
           ),
+        ),
+        Expanded(
+          flex: 5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
+            child: Column(
+              children: [
+                for (final week in weeks)
+                  Expanded(
+                    child: Row(
+                      children: [
+                        for (final day in week)
+                          Expanded(
+                            child: _DayCell(
+                              controller: controller,
+                              day: day,
+                              inMonth: day.month == focus.month,
+                              selected: isSameDay(day, _selected),
+                              occurrences: controller.occurrencesOn(day),
+                              onTap: () => setState(() => _selected = startOfDay(day)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          flex: 4,
+          child: _DayPanel(controller: controller, day: _selected),
         ),
       ],
     );
@@ -76,13 +108,17 @@ class _DayCell extends StatelessWidget {
     required this.controller,
     required this.day,
     required this.inMonth,
+    required this.selected,
     required this.occurrences,
+    required this.onTap,
   });
 
   final CalendarViewModel controller;
   final DateTime day;
   final bool inMonth;
+  final bool selected;
   final List<Occurrence> occurrences;
+  final VoidCallback onTap;
 
   static const _numberRowHeight = 34.0;
   static const _chipHeight = 18.0;
@@ -93,12 +129,13 @@ class _DayCell extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final today = isToday(day);
-    final border = cs.outlineVariant.withValues(alpha: 0.5);
+    final border = cs.outlineVariant.withValues(alpha: 0.4);
 
     return InkWell(
-      onTap: () => controller.openDay(day),
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
+          color: selected && !today ? cs.primaryContainer.withValues(alpha: 0.35) : null,
           border: Border(right: BorderSide(color: border), bottom: BorderSide(color: border)),
         ),
         padding: const EdgeInsets.fromLTRB(3, 3, 3, 0),
@@ -131,7 +168,7 @@ class _DayCell extends StatelessWidget {
                           color: today
                               ? cs.onPrimary
                               : (inMonth ? cs.onSurface : cs.onSurface.withValues(alpha: 0.38)),
-                          fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: today || selected ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -170,7 +207,7 @@ class _EventChip extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 2),
       padding: const EdgeInsets.only(left: 4, right: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -179,7 +216,7 @@ class _EventChip extends StatelessWidget {
           const SizedBox(width: 4),
           Expanded(
             child: Text(
-              occurrence.event.title.isEmpty ? '(No title)' : occurrence.event.title,
+              occurrence.event.title.isEmpty ? Strings.t('no_title') : occurrence.event.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(fontSize: 11, height: 1.1, fontWeight: FontWeight.w600),
@@ -187,6 +224,79 @@ class _EventChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Events for the selected day, shown under the month grid.
+class _DayPanel extends StatelessWidget {
+  const _DayPanel({required this.controller, required this.day});
+
+  final CalendarViewModel controller;
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final items = controller.occurrencesOn(day);
+    final heading = isToday(day)
+        ? '${Strings.t('today')} · ${DateFormat.MMMEd().format(day)}'
+        : DateFormat.yMMMMEEEEd().format(day);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.sm, AppSpace.sm, AppSpace.xs),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(heading, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+                    if (items.isNotEmpty)
+                      Text(
+                        Strings.t('events_count', {'n': items.length}),
+                        style: theme.textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => controller.openDay(day),
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: Text(Strings.t('open_day')),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: items.isEmpty
+              ? Center(
+                  child: Text(
+                    Strings.t('no_events_day'),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.xs, AppSpace.lg, 96),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpace.sm),
+                  itemBuilder: (context, i) {
+                    final occ = items[i];
+                    return EventTile(
+                      occurrence: occ,
+                      color: eventColor(controller, occ.event),
+                      calendarName: controller.calendarById(occ.event.calendarId)?.name ?? '',
+                      onTap: () => openEventDetail(context, controller, occ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
