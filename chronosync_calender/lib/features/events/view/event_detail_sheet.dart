@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:chronosync_calender/core/theme/app_theme.dart';
-import 'package:chronosync_calender/data/models/occurrence.dart';
 import 'package:chronosync_calender/core/l10n/strings.dart';
-import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
+import 'package:chronosync_calender/core/theme/app_theme.dart';
+import 'package:chronosync_calender/core/widgets/app_section.dart';
+import 'package:chronosync_calender/data/models/occurrence.dart';
 import 'package:chronosync_calender/features/calendar/view/event_tile.dart';
+import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
 import 'package:chronosync_calender/features/events/view/event_actions.dart';
 
+/// Read-only summary of an event with Edit and Delete actions.
 class EventDetailSheet extends StatelessWidget {
   const EventDetailSheet({
     super.key,
@@ -31,27 +33,39 @@ class EventDetailSheet extends StatelessWidget {
     final calendarName = controller.calendarById(event.calendarId)?.name ?? '';
     final dateLine = DateFormat.yMMMMEEEEd().format(occurrence.start);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(AppSpace.xl, 0, AppSpace.xl, AppSpace.xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-              const SizedBox(width: AppSpace.sm),
-              Expanded(
-                child: Text(calendarName, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                const SizedBox(width: AppSpace.sm),
+                Flexible(
+                  child: Text(
+                    calendarName,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurface),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpace.md),
           Text(
             event.title.isEmpty ? Strings.t('no_title') : event.title,
             style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: AppSpace.lg),
+          const SizedBox(height: AppSpace.xl),
           _InfoRow(icon: Icons.schedule, text: '$dateLine\n${timeRangeLabel(occurrence)}'),
           if (occurrence.isRecurring) _InfoRow(icon: Icons.repeat, text: Strings.t('repeating')),
           if (event.reminderMinutes.isNotEmpty)
@@ -61,7 +75,7 @@ class EventDetailSheet extends StatelessWidget {
             ),
           if (event.location.isNotEmpty) _InfoRow(icon: Icons.place_outlined, text: event.location),
           if (event.notes.isNotEmpty) _InfoRow(icon: Icons.notes_outlined, text: event.notes),
-          const SizedBox(height: AppSpace.xl),
+          const SizedBox(height: AppSpace.lg),
           Row(
             children: [
               Expanded(
@@ -69,7 +83,10 @@ class EventDetailSheet extends StatelessWidget {
                   onPressed: () => _delete(context),
                   icon: const Icon(Icons.delete_outline),
                   label: Text(Strings.t('delete')),
-                  style: OutlinedButton.styleFrom(foregroundColor: cs.error),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cs.error,
+                    side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpace.md),
@@ -110,9 +127,9 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpace.md),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+          IconBadge(icon: icon, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: AppSpace.md),
           Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
         ],

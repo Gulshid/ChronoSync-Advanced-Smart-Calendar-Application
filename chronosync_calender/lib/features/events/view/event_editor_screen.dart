@@ -13,6 +13,7 @@ import 'package:chronosync_calender/data/models/recurrence_rule.dart';
 import 'package:chronosync_calender/core/l10n/strings.dart';
 import 'package:chronosync_calender/data/services/app_settings.dart';
 import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
+import 'package:chronosync_calender/core/widgets/app_section.dart';
 import 'package:chronosync_calender/features/events/view/event_actions.dart';
 
 enum _Repeat { none, daily, weekly, monthly, yearly }
@@ -115,6 +116,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
             : _Ends.never;
     _countCtrl = TextEditingController(text: '${_remainingCount(rule, series, occ) ?? 10}');
     _untilDate = rule?.until == null ? null : startOfDay(rule!.until!.toLocal());
+    _initialSnapshot = _snapshot();
   }
 
   @override
@@ -320,6 +322,53 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  // Unsaved-change tracking ----------------------------------------------
+
+  late final String _initialSnapshot;
+
+  String _snapshot() => [
+        _titleCtrl.text,
+        _locationCtrl.text,
+        _notesCtrl.text,
+        _allDay,
+        _start,
+        _end,
+        _calendarId,
+        _colorValue,
+        _repeat,
+        ([..._weekdays]..sort()),
+        _endsMode,
+        ([..._reminders]..sort()),
+        _untilDate,
+        _intervalCtrl.text,
+        _countCtrl.text,
+      ].join('|');
+
+  bool get _dirty => _snapshot() != _initialSnapshot;
+
+  Future<bool> _confirmDiscard() async {
+    final cs = Theme.of(context).colorScheme;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(Strings.t('discard_title')),
+        content: Text(Strings.t('discard_msg')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(Strings.t('keep_editing')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: cs.error),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(Strings.t('discard')),
+          ),
+        ],
+      ),
+    );
+    return discard ?? false;
+  }
+
   // Build ----------------------------------------------------------------
 
   @override
@@ -328,173 +377,214 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     final cs = theme.colorScheme;
     final calendars = widget.controller.calendars;
     final isEdit = widget.occurrence != null;
+    final duration = _durationLabel();
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: Strings.t('close'),
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(Strings.t(isEdit ? 'edit_event' : 'new_event')),
-        actions: [
-          if (isEdit)
-            IconButton(
-              tooltip: Strings.t('delete'),
-              icon: Icon(Icons.delete_outline, color: cs.error),
-              onPressed: _delete,
-            ),
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpace.sm),
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              child: Text(Strings.t('save')),
-            ),
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final discard = await _confirmDiscard();
+        if (discard && mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: Strings.t('close'),
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.maybePop(context),
           ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.sm, AppSpace.lg, AppSpace.xl),
-          children: [
-            TextFormField(
-              controller: _titleCtrl,
-              autofocus: !isEdit,
-              textCapitalization: TextCapitalization.sentences,
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-              decoration: InputDecoration(hintText: Strings.t('add_title')),
-              validator: (value) => (value == null || value.trim().isEmpty) ? Strings.t('title_required') : null,
+          title: Text(Strings.t(isEdit ? 'edit_event' : 'new_event')),
+          actions: [
+            if (isEdit)
+              IconButton(
+                tooltip: Strings.t('delete'),
+                icon: Icon(Icons.delete_outline, color: cs.error),
+                onPressed: _delete,
+              ),
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpace.sm),
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: Text(Strings.t('save')),
+              ),
             ),
-            const SizedBox(height: AppSpace.lg),
-            _Section(
-              children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(Strings.t('all_day')),
-                  value: _allDay,
-                  onChanged: _toggleAllDay,
-                ),
-                const Divider(height: AppSpace.xl),
-                _DateTimeRow(
-                  label: Strings.t('starts'),
-                  dateText: DateFormat('EEE, MMM d, y').format(_start),
-                  onDate: _pickStartDate,
-                  timeText: _allDay ? null : AppFormat.time(_start),
-                  onTime: _allDay ? null : _pickStartTime,
-                ),
-                const SizedBox(height: AppSpace.sm),
-                _DateTimeRow(
-                  label: Strings.t('ends'),
-                  dateText: DateFormat('EEE, MMM d, y').format(_displayEnd),
-                  onDate: _pickEndDate,
-                  timeText: _allDay ? null : AppFormat.time(_end),
-                  onTime: _allDay ? null : _pickEndTime,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpace.md),
-            _Section(
-              children: [
-                _SectionLabel(Strings.t('calendar')),
-                Wrap(
-                  spacing: AppSpace.sm,
-                  runSpacing: AppSpace.sm,
-                  children: [
-                    for (final c in calendars)
-                      ChoiceChip(
-                        avatar: CircleAvatar(backgroundColor: Color(c.colorValue), radius: 6),
-                        label: Text(c.name),
-                        selected: _calendarId == c.id,
-                        onSelected: (_) => setState(() => _calendarId = c.id),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: AppSpace.lg),
-                _SectionLabel(Strings.t('colour')),
-                Wrap(
-                  spacing: AppSpace.md,
-                  runSpacing: AppSpace.md,
-                  children: [
-                    ChoiceChip(
-                      label: Text(Strings.t('calendar_colour')),
-                      selected: _colorValue == null,
-                      onSelected: (_) => setState(() => _colorValue = null),
-                    ),
-                    for (final value in calendarPalette)
-                      _ColorDot(
-                        color: Color(value),
-                        selected: _colorValue == value,
-                        onTap: () => setState(() => _colorValue = value),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpace.md),
-            _Section(
-              children: [
-                TextFormField(
-                  controller: _locationCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    hintText: Strings.t('add_location'),
-                    prefixIcon: const Icon(Icons.place_outlined),
-                  ),
-                ),
-                const SizedBox(height: AppSpace.md),
-                TextFormField(
-                  controller: _notesCtrl,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: InputDecoration(
-                    hintText: Strings.t('add_notes'),
-                    prefixIcon: const Icon(Icons.notes_outlined),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpace.md),
-            _Section(children: _reminderChildren(theme)),
-            const SizedBox(height: AppSpace.md),
-            _Section(children: _repeatChildren(theme)),
           ],
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.sm, AppSpace.lg, AppSpace.xl),
+            children: [
+              TextFormField(
+                controller: _titleCtrl,
+                autofocus: !isEdit,
+                textCapitalization: TextCapitalization.sentences,
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                decoration: InputDecoration(
+                  hintText: Strings.t('add_title'),
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
+                ),
+                validator: (value) => (value == null || value.trim().isEmpty) ? Strings.t('title_required') : null,
+              ),
+              const SizedBox(height: AppSpace.md),
+              AppSection(
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(Icons.wb_sunny_outlined, color: cs.onSurfaceVariant),
+                    title: Text(Strings.t('all_day')),
+                    value: _allDay,
+                    onChanged: _toggleAllDay,
+                  ),
+                  const Divider(height: AppSpace.xl),
+                  _DateTimeRow(
+                    label: Strings.t('starts'),
+                    dateText: DateFormat('EEE, MMM d, y').format(_start),
+                    onDate: _pickStartDate,
+                    timeText: _allDay ? null : AppFormat.time(_start),
+                    onTime: _allDay ? null : _pickStartTime,
+                  ),
+                  const SizedBox(height: AppSpace.lg),
+                  _DateTimeRow(
+                    label: Strings.t('ends'),
+                    dateText: DateFormat('EEE, MMM d, y').format(_displayEnd),
+                    onDate: _pickEndDate,
+                    timeText: _allDay ? null : AppFormat.time(_end),
+                    onTime: _allDay ? null : _pickEndTime,
+                  ),
+                  if (duration != null) ...[
+                    const SizedBox(height: AppSpace.md),
+                    Text(
+                      duration,
+                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: AppSpace.md),
+              AppSection(
+                title: Strings.t('calendar'),
+                icon: Icons.calendar_month_outlined,
+                children: [
+                  Wrap(
+                    spacing: AppSpace.sm,
+                    runSpacing: AppSpace.sm,
+                    children: [
+                      for (final c in calendars)
+                        ChoiceChip(
+                          avatar: CircleAvatar(backgroundColor: Color(c.colorValue), radius: 6),
+                          label: Text(c.name),
+                          selected: _calendarId == c.id,
+                          onSelected: (_) => setState(() => _calendarId = c.id),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpace.lg),
+                  _SectionLabel(Strings.t('colour')),
+                  Wrap(
+                    spacing: AppSpace.md,
+                    runSpacing: AppSpace.md,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ChoiceChip(
+                        label: Text(Strings.t('calendar_colour')),
+                        selected: _colorValue == null,
+                        onSelected: (_) => setState(() => _colorValue = null),
+                      ),
+                      for (final value in calendarPalette)
+                        _ColorDot(
+                          color: Color(value),
+                          selected: _colorValue == value,
+                          onTap: () => setState(() => _colorValue = value),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpace.md),
+              AppSection(
+                children: [
+                  TextFormField(
+                    controller: _locationCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      hintText: Strings.t('add_location'),
+                      prefixIcon: const Icon(Icons.place_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpace.md),
+                  TextFormField(
+                    controller: _notesCtrl,
+                    minLines: 3,
+                    maxLines: 6,
+                    decoration: InputDecoration(
+                      hintText: Strings.t('add_notes'),
+                      prefixIcon: const Icon(Icons.notes_outlined),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpace.md),
+              AppSection(
+                title: Strings.t('reminders'),
+                icon: Icons.notifications_none,
+                children: _reminderChildren(),
+              ),
+              const SizedBox(height: AppSpace.md),
+              AppSection(
+                title: Strings.t('repeat'),
+                icon: Icons.repeat,
+                children: _repeatChildren(theme),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  List<Widget> _reminderChildren(ThemeData theme) {
-    return [
-      _SectionLabel(Strings.t('reminders')),
-      Wrap(
-        spacing: AppSpace.sm,
-        runSpacing: AppSpace.sm,
-        children: [
-          for (final m in _reminderPresets)
-            FilterChip(
-              avatar: const Icon(Icons.notifications_none, size: 16),
-              label: Text(Strings.leadLabel(m)),
-              selected: _reminders.contains(m),
-              onSelected: (on) {
-                setState(() {
-                  if (on) {
-                    _reminders.add(m);
-                  } else {
-                    _reminders.remove(m);
-                  }
-                });
-              },
-            ),
-        ],
-      ),
-    ];
+  /// "1 hour" or "1 h 30 min" for timed events. Null for all-day events.
+  String? _durationLabel() {
+    if (_allDay) return null;
+    final length = _end.difference(_start);
+    if (length.isNegative || length.inMinutes == 0) return null;
+    return Strings.durationText(length);
   }
+
+  List<Widget> _reminderChildren() => [
+        Wrap(
+          spacing: AppSpace.sm,
+          runSpacing: AppSpace.sm,
+          children: [
+            for (final m in _reminderPresets)
+              FilterChip(
+                avatar: Icon(
+                  _reminders.contains(m) ? Icons.notifications_active_outlined : Icons.notifications_none,
+                  size: 16,
+                ),
+                label: Text(Strings.leadLabel(m)),
+                selected: _reminders.contains(m),
+                onSelected: (on) {
+                  setState(() {
+                    if (on) {
+                      _reminders.add(m);
+                    } else {
+                      _reminders.remove(m);
+                    }
+                  });
+                },
+              ),
+          ],
+        ),
+      ];
 
   List<Widget> _repeatChildren(ThemeData theme) {
     final cs = theme.colorScheme;
     return [
-      _SectionLabel(Strings.t('repeat')),
       Wrap(
         spacing: AppSpace.sm,
         runSpacing: AppSpace.sm,
@@ -528,6 +618,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
           const SizedBox(height: AppSpace.md),
           Wrap(
             spacing: AppSpace.sm,
+            runSpacing: AppSpace.sm,
             children: [
               for (var d = 1; d <= 7; d++)
                 FilterChip(
@@ -644,29 +735,6 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.surface,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.lg),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-      ),
-    );
-  }
-}
-
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -685,6 +753,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+/// Label above two tappable chips: the date, and the time for timed events.
 class _DateTimeRow extends StatelessWidget {
   const _DateTimeRow({
     required this.label,
@@ -703,27 +772,31 @@ class _DateTimeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 56,
-          child: Text(label, style: theme.textTheme.labelLarge),
+        Text(
+          label,
+          style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        Flexible(
-          child: ActionChip(
-            avatar: const Icon(Icons.calendar_today_outlined, size: 16),
-            label: Text(dateText),
-            onPressed: onDate,
-          ),
+        const SizedBox(height: AppSpace.xs),
+        Wrap(
+          spacing: AppSpace.sm,
+          runSpacing: AppSpace.sm,
+          children: [
+            ActionChip(
+              avatar: const Icon(Icons.calendar_today_outlined, size: 16),
+              label: Text(dateText),
+              onPressed: onDate,
+            ),
+            if (timeText != null)
+              ActionChip(
+                avatar: const Icon(Icons.schedule, size: 16),
+                label: Text(timeText!),
+                onPressed: onTime,
+              ),
+          ],
         ),
-        if (timeText != null) ...[
-          const SizedBox(width: AppSpace.sm),
-          ActionChip(
-            avatar: const Icon(Icons.schedule, size: 16),
-            label: Text(timeText!),
-            onPressed: onTime,
-          ),
-        ],
       ],
     );
   }
