@@ -21,6 +21,9 @@ class EventModel {
     this.originalStart,
     this.isCancelled = false,
     this.reminderMinutes = const [],
+    this.uid,
+    this.googleId,
+    this.googleSyncedMs,
   });
 
   factory EventModel.draft({
@@ -56,6 +59,15 @@ class EventModel {
   /// Minutes before the start to remind (0 = at the start). Empty = no reminders.
   final List<int> reminderMinutes;
 
+  /// UID from an imported .ics file, used to avoid importing the same event twice.
+  final String? uid;
+
+  /// Id of the matching event in Google Calendar, once synced.
+  final String? googleId;
+
+  /// When this row last matched Google, in epoch milliseconds.
+  final int? googleSyncedMs;
+
   EventModel copyWith({
     String? id,
     String? calendarId,
@@ -72,6 +84,9 @@ class EventModel {
     bool? isCancelled,
     DateTime? updatedAt,
     List<int>? reminderMinutes,
+    String? uid,
+    String? googleId,
+    int? googleSyncedMs,
   }) {
     return EventModel(
       id: id ?? this.id,
@@ -89,6 +104,9 @@ class EventModel {
       isCancelled: isCancelled ?? this.isCancelled,
       updatedAt: updatedAt ?? DateTime.now(),
       reminderMinutes: reminderMinutes ?? this.reminderMinutes,
+      uid: uid ?? this.uid,
+      googleId: googleId ?? this.googleId,
+      googleSyncedMs: googleSyncedMs ?? this.googleSyncedMs,
     );
   }
 
@@ -110,6 +128,9 @@ class EventModel {
         'is_cancelled': isCancelled ? 1 : 0,
         'updated_ms': updatedAt.toUtc().millisecondsSinceEpoch,
         'reminders': reminderMinutes.join(','),
+        'uid': uid,
+        'google_id': googleId,
+        'google_synced_ms': googleSyncedMs,
       };
 
   factory EventModel.fromMap(Map<String, Object?> m) {
@@ -135,6 +156,9 @@ class EventModel {
         for (final part in reminderText.split(','))
           if (int.tryParse(part) != null) int.parse(part),
       ],
+      uid: m['uid'] as String?,
+      googleId: m['google_id'] as String?,
+      googleSyncedMs: m['google_synced_ms'] as int?,
     );
   }
 }

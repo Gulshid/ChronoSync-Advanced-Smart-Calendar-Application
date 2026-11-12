@@ -11,8 +11,8 @@ class AppDatabase {
 
   static const _fileName = 'chronosync.db';
 
-  /// v1: Phases 0 to 3. v2: Phase 4 adds events.reminders (comma-separated minutes).
-  static const _version = 2;
+  /// v1: Phases 0 to 3. v2: reminders (Phase 4). v3: uid and Google sync fields (Phases 7 and 8).
+  static const _version = 3;
 
   static const _schema = [
     '''
@@ -40,10 +40,14 @@ class AppDatabase {
       original_start_ms INTEGER,
       is_cancelled INTEGER NOT NULL DEFAULT 0,
       updated_ms INTEGER NOT NULL,
-      reminders TEXT NOT NULL DEFAULT ''
+      reminders TEXT NOT NULL DEFAULT '',
+      uid TEXT,
+      google_id TEXT,
+      google_synced_ms INTEGER
     )''',
     'CREATE INDEX idx_events_range ON events(start_ms, end_ms)',
     'CREATE INDEX idx_events_parent ON events(parent_id, original_start_ms)',
+    'CREATE INDEX idx_events_google ON events(google_id)',
   ];
 
   static Future<AppDatabase> open({String? path}) async {
@@ -84,6 +88,12 @@ class AppDatabase {
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute("ALTER TABLE events ADD COLUMN reminders TEXT NOT NULL DEFAULT ''");
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE events ADD COLUMN uid TEXT');
+      await db.execute('ALTER TABLE events ADD COLUMN google_id TEXT');
+      await db.execute('ALTER TABLE events ADD COLUMN google_synced_ms INTEGER');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_events_google ON events(google_id)');
     }
   }
 }
