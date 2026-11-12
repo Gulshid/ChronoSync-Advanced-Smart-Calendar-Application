@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:chronosync_calender/core/theme/app_theme.dart';
 import 'package:chronosync_calender/core/l10n/strings.dart';
-import 'package:chronosync_calender/data/services/notification_service.dart';
+import 'package:chronosync_calender/core/theme/app_theme.dart';
+import 'package:chronosync_calender/core/widgets/app_section.dart';
 import 'package:chronosync_calender/data/services/app_settings.dart';
+import 'package:chronosync_calender/data/services/notification_service.dart';
 import 'package:chronosync_calender/features/data_tools/view/data_tools_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -17,13 +18,17 @@ class SettingsScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: settings,
       builder: (context, _) {
+        final theme = Theme.of(context);
+        final cs = theme.colorScheme;
+
         return Scaffold(
           appBar: AppBar(title: Text(Strings.t('settings_title'))),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.sm, AppSpace.lg, AppSpace.xl),
             children: [
-              _Group(
+              AppSection(
                 title: Strings.t('set_appearance'),
+                icon: Icons.palette_outlined,
                 children: [
                   _Label(Strings.t('set_theme')),
                   SegmentedButton<ThemeMode>(
@@ -51,8 +56,9 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpace.lg),
-              _Group(
+              AppSection(
                 title: Strings.t('set_language'),
+                icon: Icons.translate,
                 children: [
                   Wrap(
                     spacing: AppSpace.sm,
@@ -72,8 +78,9 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpace.lg),
-              _Group(
+              AppSection(
                 title: Strings.t('set_time'),
+                icon: Icons.schedule,
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -95,24 +102,9 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpace.lg),
-              _Group(
-                title: Strings.t('data_title'),
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.import_export),
-                    title: Text(Strings.t('data_title')),
-                    subtitle: Text(Strings.t('data_subtitle')),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => const DataToolsScreen()),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpace.lg),
-              _Group(
+              AppSection(
                 title: Strings.t('set_reminders'),
+                icon: Icons.notifications_none,
                 children: [
                   _Label(Strings.t('set_default_rem')),
                   Wrap(
@@ -139,40 +131,25 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpace.lg),
+              // Data tools live on their own screen, so this is a single navigation row.
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.lg, vertical: AppSpace.sm),
+                  leading: const IconBadge(icon: Icons.import_export),
+                  title: Text(Strings.t('data_title'), style: theme.textTheme.titleSmall),
+                  subtitle: Text(Strings.t('data_subtitle')),
+                  trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const DataToolsScreen()),
+                  ),
+                ),
+              ),
             ],
           ),
         );
       },
-    );
-  }
-}
-
-class _Group extends StatelessWidget {
-  const _Group({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: AppSpace.sm),
-          child: Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700),
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpace.lg),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-          ),
-        ),
-      ],
     );
   }
 }

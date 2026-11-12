@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:chronosync_calender/core/app/app_services.dart';
+import 'package:chronosync_calender/core/widgets/app_section.dart';
 import 'package:chronosync_calender/core/utils/app_format.dart';
 import 'package:chronosync_calender/core/theme/app_theme.dart';
 import 'package:chronosync_calender/data/services/backup_service.dart';
@@ -166,8 +167,9 @@ class _DataToolsScreenState extends State<DataToolsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.sm, AppSpace.lg, AppSpace.xl),
               children: [
-                _Group(
+                AppSection(
                   title: Strings.t('data_sec_export'),
+                  icon: Icons.upload_file_outlined,
                   children: [
                     _Action(
                       icon: Icons.event_note_outlined,
@@ -184,8 +186,9 @@ class _DataToolsScreenState extends State<DataToolsScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSpace.lg),
-                _Group(
+                AppSection(
                   title: Strings.t('data_sec_import'),
+                  icon: Icons.download_outlined,
                   children: [
                     _Action(
                       icon: Icons.file_open_outlined,
@@ -202,22 +205,24 @@ class _DataToolsScreenState extends State<DataToolsScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSpace.lg),
-                _Group(
+                AppSection(
                   title: Strings.t('data_sec_google'),
+                  icon: Icons.cloud_outlined,
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        _connected ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
-                        color: cs.primary,
+                      leading: IconBadge(icon: _connected ? Icons.cloud_done_outlined : Icons.cloud_off_outlined),
+                      title: Text(
+                        _connected ? (_email ?? '') : Strings.t('google_signed_out'),
+                        style: theme.textTheme.titleSmall,
                       ),
-                      title: Text(_connected ? (_email ?? '') : Strings.t('google_signed_out')),
                       subtitle: Text(
                         last == null
                             ? Strings.t('google_never')
                             : Strings.t('google_last', {'time': '${DateFormat.yMMMd().format(last)} ${AppFormat.time(last)}'}),
                       ),
                     ),
+                    const SizedBox(height: AppSpace.sm),
                     Text(
                       Strings.t('google_help'),
                       style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
@@ -263,36 +268,7 @@ class _DataToolsScreenState extends State<DataToolsScreen> {
   }
 }
 
-class _Group extends StatelessWidget {
-  const _Group({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: AppSpace.sm),
-          child: Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700),
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpace.lg),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
+/// Tappable row with an icon badge, used for each data action.
 class _Action extends StatelessWidget {
   const _Action({required this.icon, required this.title, required this.subtitle, required this.onTap});
 
@@ -303,12 +279,13 @@ class _Action extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon),
+      leading: IconBadge(icon: icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Icon(Icons.chevron_right, color: onTap == null ? cs.outline : cs.onSurfaceVariant),
       enabled: onTap != null,
       onTap: onTap,
     );

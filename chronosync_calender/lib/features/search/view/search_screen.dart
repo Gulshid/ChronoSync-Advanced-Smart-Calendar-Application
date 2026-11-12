@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:chronosync_calender/core/theme/app_theme.dart';
-import 'package:chronosync_calender/data/models/occurrence.dart';
 import 'package:chronosync_calender/core/l10n/strings.dart';
+import 'package:chronosync_calender/core/theme/app_theme.dart';
 import 'package:chronosync_calender/core/widgets/empty_state.dart';
-import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
+import 'package:chronosync_calender/data/models/occurrence.dart';
 import 'package:chronosync_calender/features/calendar/view/event_tile.dart';
+import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
 import 'package:chronosync_calender/features/events/view/event_actions.dart';
 
 Future<void> openSearch(BuildContext context, CalendarViewModel controller) async {
@@ -41,9 +41,15 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
+  void _clear() {
+    _field.clear();
+    _onChanged('');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final controller = widget.controller;
 
     return Scaffold(
@@ -55,10 +61,18 @@ class _SearchScreenState extends State<SearchScreen> {
             child: TextField(
               controller: _field,
               autofocus: true,
+              textInputAction: TextInputAction.search,
               onChanged: _onChanged,
               decoration: InputDecoration(
                 hintText: Strings.t('search_hint'),
                 prefixIcon: const Icon(Icons.search),
+                suffixIcon: _field.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: Strings.t('close'),
+                        icon: const Icon(Icons.close),
+                        onPressed: _clear,
+                      ),
               ),
             ),
           ),
@@ -84,33 +98,50 @@ class _SearchScreenState extends State<SearchScreen> {
                     message: '',
                   );
                 }
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.xs, AppSpace.lg, AppSpace.xl),
-                  itemCount: results.length,
-                  itemBuilder: (context, i) {
-                    final occ = results[i];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpace.sm),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 0, 0, 6),
-                            child: Text(
-                              DateFormat.yMMMEd().format(occ.start),
-                              style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary),
-                            ),
-                          ),
-                          EventTile(
-                            occurrence: occ,
-                            color: eventColor(controller, occ.event),
-                            calendarName: controller.calendarById(occ.event.calendarId)?.name ?? '',
-                            onTap: () => openEventDetail(context, controller, occ),
-                          ),
-                        ],
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpace.lg, 0, AppSpace.lg, AppSpace.sm),
+                      child: Text(
+                        Strings.t('results_count', {'n': results.length}),
+                        style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant),
                       ),
-                    );
-                  },
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(AppSpace.lg, 0, AppSpace.lg, AppSpace.xl),
+                        itemCount: results.length,
+                        itemBuilder: (context, i) {
+                          final occ = results[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpace.sm),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(AppSpace.xs, AppSpace.xs, 0, AppSpace.xs),
+                                  child: Text(
+                                    DateFormat.yMMMEd().format(occ.start),
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      color: cs.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                EventTile(
+                                  occurrence: occ,
+                                  color: eventColor(controller, occ.event),
+                                  calendarName: controller.calendarById(occ.event.calendarId)?.name ?? '',
+                                  onTap: () => openEventDetail(context, controller, occ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
