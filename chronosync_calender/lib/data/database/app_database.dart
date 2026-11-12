@@ -10,9 +10,11 @@ class AppDatabase {
   final Database raw;
 
   static const _fileName = 'chronosync.db';
-  static const _version = 1;
 
-  static const _schemaV1 = [
+  /// v1: Phases 0 to 3. v2: Phase 4 adds events.reminders (comma-separated minutes).
+  static const _version = 2;
+
+  static const _schema = [
     '''
     CREATE TABLE calendars (
       id TEXT PRIMARY KEY,
@@ -37,16 +39,11 @@ class AppDatabase {
       parent_id TEXT REFERENCES events(id) ON DELETE CASCADE,
       original_start_ms INTEGER,
       is_cancelled INTEGER NOT NULL DEFAULT 0,
-      updated_ms INTEGER NOT NULL
+      updated_ms INTEGER NOT NULL,
+      reminders TEXT NOT NULL DEFAULT ''
     )''',
     'CREATE INDEX idx_events_range ON events(start_ms, end_ms)',
     'CREATE INDEX idx_events_parent ON events(parent_id, original_start_ms)',
-    '''
-    CREATE TABLE reminders (
-      id TEXT PRIMARY KEY,
-      event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-      minutes_before INTEGER NOT NULL
-    )''',
   ];
 
   static Future<AppDatabase> open({String? path}) async {
@@ -71,7 +68,7 @@ class AppDatabase {
   }
 
   static Future<void> _onCreate(Database db, int version) async {
-    for (final sql in _schemaV1) {
+    for (final sql in _schema) {
       await db.execute(sql);
     }
     final seeds = <Map<String, Object?>>[
@@ -85,6 +82,8 @@ class AppDatabase {
   }
 
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Future schema changes go here, one block per version.
+    if (oldVersion < 2) {
+      await db.execute("ALTER TABLE events ADD COLUMN reminders TEXT NOT NULL DEFAULT ''");
+    }
   }
 }

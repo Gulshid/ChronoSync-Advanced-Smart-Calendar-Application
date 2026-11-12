@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../features/calendar/calendar_screen.dart';
 import '../features/calendars/calendars_screen.dart';
+import '../features/settings/settings_screen.dart';
+import '../l10n/strings.dart';
 import '../state/calendar_controller.dart';
 
 class HomeShell extends StatefulWidget {
@@ -24,21 +26,27 @@ class _HomeShellState extends State<HomeShell> {
         children: [
           CalendarScreen(controller: widget.controller),
           CalendarsScreen(controller: widget.controller),
+          const SettingsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Calendar',
+            icon: const Icon(Icons.calendar_month_outlined),
+            selectedIcon: const Icon(Icons.calendar_month),
+            label: Strings.t('nav_calendar'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.layers_outlined),
-            selectedIcon: Icon(Icons.layers),
-            label: 'Calendars',
+            icon: const Icon(Icons.layers_outlined),
+            selectedIcon: const Icon(Icons.layers),
+            label: Strings.t('nav_calendars'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: Strings.t('nav_settings'),
           ),
         ],
       ),
