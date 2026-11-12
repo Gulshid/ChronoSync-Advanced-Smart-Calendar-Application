@@ -6,6 +6,7 @@ import 'package:chronosync_calender/data/services/app_settings.dart';
 import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
 import 'package:chronosync_calender/core/app/app_navigator.dart';
 import 'package:chronosync_calender/core/app/home_shell.dart';
+import 'package:chronosync_calender/core/app/splash_screen.dart';
 class ChronoSyncApp extends StatelessWidget {
   const ChronoSyncApp({super.key, required this.controller});
 
@@ -40,7 +41,7 @@ class ChronoSyncApp extends StatelessWidget {
               child: child!,
             );
           },
-          home: HomeShell(controller: controller),
+          home: SplashGate(child: HomeShell(controller: controller)),
         );
       },
     );
