@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../l10n/strings.dart';
 import '../../notifications/notification_service.dart';
 import '../../state/app_settings.dart';
+import '../data_tools/data_tools_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -90,6 +91,22 @@ class SettingsScreen extends StatelessWidget {
                     ],
                     selected: {settings.weekStart},
                     onSelectionChanged: (s) => settings.setWeekStart(s.first),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpace.lg),
+              _Group(
+                title: Strings.t('data_title'),
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.import_export),
+                    title: Text(Strings.t('data_title')),
+                    subtitle: Text(Strings.t('data_subtitle')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const DataToolsScreen()),
+                    ),
                   ),
                 ],
               ),
