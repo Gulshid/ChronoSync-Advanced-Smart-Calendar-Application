@@ -31,6 +31,24 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+
+	<!-- Google Sign-In: iOS client ID from Google Cloud Console -->
+	<key>GIDClientID</key>
+	<string>18597260392-tj3reh0n00jujh8d3nrjb7vt6euep279.apps.googleusercontent.com</string>
+
+	<!-- Google Sign-In: returns the user to the app after sign-in (reversed client ID) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.18597260392-tj3reh0n00jujh8d3nrjb7vt6euep279</string>
+			</array>
+		</dict>
+	</array>
+
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

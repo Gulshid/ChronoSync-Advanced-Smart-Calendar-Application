@@ -1,8 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 
-import '../database/app_database.dart';
-import '../models/calendar_model.dart';
-import '../models/event_model.dart';
+import 'package:chronosync_calender/data/repositories/app_database.dart';
+import 'package:chronosync_calender/data/models/calendar_model.dart';
+import 'package:chronosync_calender/data/models/event_model.dart';
 
 /// Database access for import, export, backup and Google sync.
 class TransferRepository {

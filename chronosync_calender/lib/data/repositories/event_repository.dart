@@ -1,11 +1,11 @@
 import 'package:sqflite/sqflite.dart';
 
-import '../../core/utils/id_generator.dart';
-import '../database/app_database.dart';
-import '../models/event_model.dart';
-import '../models/occurrence.dart';
-import '../recurrence/occurrence_builder.dart';
-import '../recurrence/recurrence_rule.dart';
+import 'package:chronosync_calender/core/utils/id_generator.dart';
+import 'package:chronosync_calender/data/repositories/app_database.dart';
+import 'package:chronosync_calender/data/models/event_model.dart';
+import 'package:chronosync_calender/data/models/occurrence.dart';
+import 'package:chronosync_calender/data/services/occurrence_builder.dart';
+import 'package:chronosync_calender/data/models/recurrence_rule.dart';
 
 /// Reverses a delete. Returned by every delete so the UI can offer Undo.
 typedef UndoAction = Future<void> Function();

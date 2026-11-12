@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
+import 'package:chronosync_calender/core/theme/app_colors.dart';
 
 /// Spacing scale used across the app. Use these instead of raw numbers.
 abstract final class AppSpace {

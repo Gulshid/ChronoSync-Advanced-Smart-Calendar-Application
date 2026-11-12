@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/data/ics/ics_reader.dart';
-import '../lib/data/ics/ics_writer.dart';
-import '../lib/data/models/event_model.dart';
+import 'package:chronosync_calender/data/services/ics_reader.dart';
+import 'package:chronosync_calender/data/services/ics_writer.dart';
+import 'package:chronosync_calender/data/models/event_model.dart';
 
 void main() {
   final updated = DateTime(2026, 11, 12, 9);

@@ -1,6 +1,6 @@
 import 'package:chronosync_calender/data/models/event_model.dart';
 import 'package:chronosync_calender/data/models/occurrence.dart';
-import 'package:chronosync_calender/features/free_time/free_time_finder.dart';
+import 'package:chronosync_calender/data/services/free_time_finder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _event = EventModel(

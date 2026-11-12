@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'app/app.dart';
-import 'app/app_services.dart';
-import 'data/database/app_database.dart';
-import 'data/repositories/calendar_repository.dart';
-import 'data/repositories/event_repository.dart';
-import 'data/repositories/transfer_repository.dart';
-import 'notifications/notification_service.dart';
-import 'notifications/reminder_router.dart';
-import 'notifications/reminder_scheduler.dart';
-import 'state/app_settings.dart';
-import 'state/calendar_controller.dart';
-import 'sync/google_calendar_sync.dart';
+import 'package:chronosync_calender/core/app/app.dart';
+import 'package:chronosync_calender/core/app/app_services.dart';
+import 'package:chronosync_calender/data/repositories/app_database.dart';
+import 'package:chronosync_calender/data/repositories/calendar_repository.dart';
+import 'package:chronosync_calender/data/repositories/event_repository.dart';
+import 'package:chronosync_calender/data/repositories/transfer_repository.dart';
+import 'package:chronosync_calender/data/services/notification_service.dart';
+import 'package:chronosync_calender/core/app/reminder_router.dart';
+import 'package:chronosync_calender/data/services/reminder_scheduler.dart';
+import 'package:chronosync_calender/data/services/app_settings.dart';
+import 'package:chronosync_calender/features/calendar/view_model/calendar_view_model.dart';
+import 'package:chronosync_calender/data/services/google_calendar_sync.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +22,7 @@ Future<void> main() async {
   final db = await AppDatabase.open();
   final events = EventRepository(db);
   final transfer = TransferRepository(db);
-  final controller = CalendarController(events: events, calendars: CalendarRepository(db));
+  final controller = CalendarViewModel(events: events, calendars: CalendarRepository(db));
 
   AppServices.controller = controller;
   AppServices.transfer = transfer;

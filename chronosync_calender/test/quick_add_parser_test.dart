@@ -1,4 +1,4 @@
-import 'package:chronosync_calender/features/quick_add/quick_add_parser.dart';
+import 'package:chronosync_calender/data/services/quick_add_parser.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Thursday 12 November 2026, 10:00

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/data/ics/ics_codec.dart';
+import 'package:chronosync_calender/data/services/ics_codec.dart';
 
 void main() {
   test('escape and unescape reverse each other', () {

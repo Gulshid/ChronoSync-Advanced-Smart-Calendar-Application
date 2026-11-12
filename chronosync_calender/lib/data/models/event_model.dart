@@ -1,4 +1,4 @@
-import '../../core/utils/id_generator.dart';
+import 'package:chronosync_calender/core/utils/id_generator.dart';
 
 /// Sentinel that lets copyWith tell "not provided" apart from "set to null".
 const Object _keep = Object();

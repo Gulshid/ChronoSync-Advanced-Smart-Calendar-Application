@@ -1,5 +1,5 @@
-import '../database/app_database.dart';
-import '../models/calendar_model.dart';
+import 'package:chronosync_calender/data/repositories/app_database.dart';
+import 'package:chronosync_calender/data/models/calendar_model.dart';
 
 class CalendarRepository {
   CalendarRepository(this._db);

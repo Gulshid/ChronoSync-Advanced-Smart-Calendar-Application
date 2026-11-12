@@ -1,4 +1,4 @@
-import 'event_model.dart';
+import 'package:chronosync_calender/data/models/event_model.dart';
 
 /// One concrete appearance of an event on the calendar.
 class Occurrence {
