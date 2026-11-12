@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../../core/format/app_format.dart';
+import '../../../l10n/strings.dart';
 
 import '../../../core/constants/calendar_palette.dart';
 import '../../../core/theme/app_theme.dart';
@@ -14,9 +15,8 @@ Color eventColor(CalendarController controller, EventModel event) {
 }
 
 String timeRangeLabel(Occurrence occ) {
-  if (occ.isAllDay) return 'All day';
-  final fmt = DateFormat.jm();
-  return '${fmt.format(occ.start)} – ${fmt.format(occ.end)}';
+  if (occ.isAllDay) return Strings.t('all_day');
+  return AppFormat.range(occ.start, occ.end);
 }
 
 /// Card used in lists (agenda view). Shows time, title, location and calendar.
@@ -66,7 +66,7 @@ class EventTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      event.title.isEmpty ? '(No title)' : event.title,
+                      event.title.isEmpty ? Strings.t('no_title') : event.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/date_helpers.dart';
+import '../../l10n/strings.dart';
 import '../../state/calendar_controller.dart';
-import '../events/event_actions.dart';
+import '../quick_add/quick_add_sheet.dart';
 import 'widgets/agenda_view.dart';
 import 'widgets/calendar_header.dart';
 import 'widgets/month_view.dart';
@@ -46,9 +47,9 @@ class CalendarScreen extends StatelessWidget {
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => openEventEditor(context, controller, defaultStart: _defaultStart()),
-            icon: const Icon(Icons.add),
-            label: const Text('New event'),
+            onPressed: () => openQuickAdd(context, controller),
+            icon: const Icon(Icons.bolt),
+            label: Text(Strings.t('new_event')),
           ),
         );
       },
@@ -65,12 +66,5 @@ class CalendarScreen extends StatelessWidget {
   List<DateTime> _weekDays() {
     final start = startOfWeek(controller.focusDate, controller.firstWeekday);
     return [for (var i = 0; i < 7; i++) addDays(start, i)];
-  }
-
-  DateTime _defaultStart() {
-    final focus = controller.focusDate;
-    final now = DateTime.now();
-    if (isSameDay(focus, now)) return DateTime(now.year, now.month, now.day, now.hour + 1);
-    return DateTime(focus.year, focus.month, focus.day, 9);
   }
 }

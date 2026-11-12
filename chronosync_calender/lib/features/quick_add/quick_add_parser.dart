@@ -133,7 +133,7 @@ abstract final class QuickAddParser {
       return QuickAddResult(title: title, start: day, end: addDays(day, 1), allDay: true);
     }
 
-    final DateTime start;
+    DateTime start;
     if (date == null && hour == null) {
       start = DateTime(now.year, now.month, now.day, now.hour + 1);
     } else if (date == null) {

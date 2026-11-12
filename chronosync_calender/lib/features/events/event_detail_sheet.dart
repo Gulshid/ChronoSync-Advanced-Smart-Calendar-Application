@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/occurrence.dart';
+import '../../l10n/strings.dart';
 import '../../state/calendar_controller.dart';
 import '../calendar/widgets/event_tile.dart';
 import 'event_actions.dart';
@@ -28,7 +29,7 @@ class EventDetailSheet extends StatelessWidget {
     final event = occurrence.event;
     final color = eventColor(controller, event);
     final calendarName = controller.calendarById(event.calendarId)?.name ?? '';
-    final dateLine = DateFormat('EEEE, MMMM d, y').format(occurrence.start);
+    final dateLine = DateFormat.yMMMMEEEEd().format(occurrence.start);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpace.xl, 0, AppSpace.xl, AppSpace.xl),
@@ -38,28 +39,26 @@ class EventDetailSheet extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
+              Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: AppSpace.sm),
               Expanded(
-                child: Text(
-                  calendarName,
-                  style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant),
-                ),
+                child: Text(calendarName, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
               ),
             ],
           ),
           const SizedBox(height: AppSpace.md),
           Text(
-            event.title.isEmpty ? '(No title)' : event.title,
+            event.title.isEmpty ? Strings.t('no_title') : event.title,
             style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpace.lg),
           _InfoRow(icon: Icons.schedule, text: '$dateLine\n${timeRangeLabel(occurrence)}'),
-          if (occurrence.isRecurring) const _InfoRow(icon: Icons.repeat, text: 'Part of a repeating series'),
+          if (occurrence.isRecurring) _InfoRow(icon: Icons.repeat, text: Strings.t('repeating')),
+          if (event.reminderMinutes.isNotEmpty)
+            _InfoRow(
+              icon: Icons.notifications_outlined,
+              text: event.reminderMinutes.map(Strings.leadLabel).join(', '),
+            ),
           if (event.location.isNotEmpty) _InfoRow(icon: Icons.place_outlined, text: event.location),
           if (event.notes.isNotEmpty) _InfoRow(icon: Icons.notes_outlined, text: event.notes),
           const SizedBox(height: AppSpace.xl),
@@ -69,7 +68,7 @@ class EventDetailSheet extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _delete(context),
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete'),
+                  label: Text(Strings.t('delete')),
                   style: OutlinedButton.styleFrom(foregroundColor: cs.error),
                 ),
               ),
@@ -81,7 +80,7 @@ class EventDetailSheet extends StatelessWidget {
                     openEventEditor(hostContext, controller, occurrence: occurrence);
                   },
                   icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Edit'),
+                  label: Text(Strings.t('edit')),
                 ),
               ),
             ],

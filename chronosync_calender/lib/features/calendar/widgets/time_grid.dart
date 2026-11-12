@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/format/app_format.dart';
+import '../../../l10n/strings.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_helpers.dart';
@@ -156,7 +158,7 @@ class _AllDayLane extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(top: 4, right: 6),
               child: Text(
-                'All day',
+                Strings.t('all_day'),
                 textAlign: TextAlign.right,
                 style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -205,7 +207,7 @@ class _AllDayCell extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Text(
-                      occ.event.title.isEmpty ? '(No title)' : occ.event.title,
+                      occ.event.title.isEmpty ? Strings.t('no_title') : occ.event.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -222,7 +224,7 @@ class _AllDayCell extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '+$extra more',
+                Strings.t('more_count', {'n': extra}),
                 style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
@@ -249,7 +251,7 @@ class _HourLabels extends StatelessWidget {
             left: 0,
             right: 8,
             child: Text(
-              DateFormat.j().format(DateTime(2000, 1, 1, h)),
+              AppFormat.hour(h),
               textAlign: TextAlign.right,
               style: style,
             ),
@@ -357,7 +359,7 @@ class _TimeBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final color = eventColor(controller, occurrence.event);
-    final title = occurrence.event.title.isEmpty ? '(No title)' : occurrence.event.title;
+    final title = occurrence.event.title.isEmpty ? Strings.t('no_title') : occurrence.event.title;
 
     return Semantics(
       label: '$title, ${timeRangeLabel(occurrence)}',
@@ -382,7 +384,7 @@ class _TimeBlock extends StatelessWidget {
                 ),
                 if (!compact)
                   Text(
-                    DateFormat.jm().format(occurrence.start),
+                    AppFormat.time(occurrence.start),
                     style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
               ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/strings.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_helpers.dart';
@@ -42,10 +43,10 @@ class AgendaView extends StatelessWidget {
     }
 
     if (children.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.event_available_outlined,
-        title: 'Nothing planned',
-        message: 'No events in the next 30 days. Tap New event to add one.',
+        title: Strings.t('nothing_planned'),
+        message: Strings.t('nothing_planned_msg'),
       );
     }
 
@@ -70,7 +71,7 @@ class _AgendaDayHeader extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            today ? 'Today' : DateFormat('EEEE, MMM d').format(day),
+            today ? Strings.t('today') : DateFormat('EEEE, MMM d').format(day),
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: today ? theme.colorScheme.primary : theme.colorScheme.onSurface,

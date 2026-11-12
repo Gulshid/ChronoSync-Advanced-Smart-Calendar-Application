@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/calendar_palette.dart';
+import '../../core/format/app_format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/id_generator.dart';
@@ -9,6 +10,8 @@ import '../../data/models/event_model.dart';
 import '../../data/models/occurrence.dart';
 import '../../data/recurrence/occurrence_builder.dart';
 import '../../data/recurrence/recurrence_rule.dart';
+import '../../l10n/strings.dart';
+import '../../state/app_settings.dart';
 import '../../state/calendar_controller.dart';
 import 'event_actions.dart';
 
@@ -16,17 +19,26 @@ enum _Repeat { none, daily, weekly, monthly, yearly }
 
 enum _Ends { never, onDate, afterCount }
 
+/// Reminder lead times offered as chips (minutes before the start).
+const _reminderPresets = [0, 5, 10, 15, 30, 60, 120, 1440, 2880, 10080];
+
 class EventEditorScreen extends StatefulWidget {
   const EventEditorScreen({
     super.key,
     required this.controller,
     this.occurrence,
     this.defaultStart,
+    this.defaultEnd,
+    this.initialTitle,
+    this.initialAllDay = false,
   });
 
   final CalendarController controller;
   final Occurrence? occurrence;
   final DateTime? defaultStart;
+  final DateTime? defaultEnd;
+  final String? initialTitle;
+  final bool initialAllDay;
 
   @override
   State<EventEditorScreen> createState() => _EventEditorScreenState();
@@ -50,6 +62,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
   late _Repeat _repeat;
   late Set<int> _weekdays;
   late _Ends _endsMode;
+  late Set<int> _reminders;
   DateTime? _untilDate;
   bool _saving = false;
 
@@ -69,15 +82,21 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     final series = occ?.series;
     final anchor = occ?.start ?? widget.defaultStart ?? _nextHalfHour();
 
-    _titleCtrl = TextEditingController(text: event?.title ?? '');
+    _titleCtrl = TextEditingController(text: event?.title ?? widget.initialTitle ?? '');
     _locationCtrl = TextEditingController(text: event?.location ?? '');
     _notesCtrl = TextEditingController(text: event?.notes ?? '');
 
-    _allDay = event?.allDay ?? false;
+    _allDay = event?.allDay ?? widget.initialAllDay;
     _start = _allDay ? startOfDay(anchor) : anchor;
-    _end = occ?.end ?? _start.add(const Duration(hours: 1));
-    _calendarId = event?.calendarId ?? _defaultCalendarId();
+    _end = occ?.end ?? widget.defaultEnd ?? _start.add(const Duration(hours: 1));
+    _calendarId = event?.calendarId ?? widget.controller.defaultCalendarId;
     _colorValue = event?.colorValue;
+
+    final defaultReminder = AppSettings.instance.defaultReminder;
+    final initialReminders = event != null
+        ? event.reminderMinutes
+        : (defaultReminder >= 0 ? [defaultReminder] : const <int>[]);
+    _reminders = {...initialReminders};
 
     final rule = series?.rrule == null ? null : RecurrenceRule.parse(series!.rrule!);
     _repeat = switch (rule?.frequency) {
@@ -119,14 +138,6 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     ).length;
     // ignore: unnecessary_non_null_assertion
     return rule!.count! - before;
-  }
-
-  String _defaultCalendarId() {
-    final calendars = widget.controller.calendars;
-    for (final c in calendars) {
-      if (c.isDefault) return c.id;
-    }
-    return calendars.isEmpty ? 'cal_personal' : calendars.first.id;
   }
 
   DateTime _nextHalfHour() {
@@ -240,19 +251,20 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     final start = _allDay ? startOfDay(_start) : _start;
     final end = _allDay ? startOfDay(_end) : _end;
     if (!end.isAfter(start)) {
-      _showMessage('The end must be after the start.');
+      _showMessage(Strings.t('end_after_start'));
       return;
     }
 
     final occ = widget.occurrence;
     var scope = RecurrenceScope.thisEvent;
     if (occ != null && occ.isRecurring) {
-      final picked = await askRecurrenceScope(context, verb: 'Save');
+      final picked = await askRecurrenceScope(context, verb: Strings.t('verb_save'));
       if (picked == null) return;
       scope = picked;
     }
 
     final rule = _buildRule();
+    final reminders = _reminders.toList()..sort();
     final base = occ?.event;
     final draft = base == null
         ? EventModel(
@@ -266,6 +278,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
             start: start,
             end: end,
             rrule: rule?.toRRule(),
+            reminderMinutes: reminders,
             updatedAt: DateTime.now(),
           )
         : base.copyWith(
@@ -278,6 +291,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
             start: start,
             end: end,
             rrule: rule?.toRRule(),
+            reminderMinutes: reminders,
           );
 
     setState(() => _saving = true);
@@ -288,7 +302,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      _showMessage('Could not save the event. $error');
+      _showMessage(Strings.t('save_failed', {'error': '$error'}));
     }
   }
 
@@ -318,15 +332,15 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          tooltip: 'Close',
+          tooltip: Strings.t('close'),
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(isEdit ? 'Edit event' : 'New event'),
+        title: Text(Strings.t(isEdit ? 'edit_event' : 'new_event')),
         actions: [
           if (isEdit)
             IconButton(
-              tooltip: 'Delete',
+              tooltip: Strings.t('delete'),
               icon: Icon(Icons.delete_outline, color: cs.error),
               onPressed: _delete,
             ),
@@ -334,7 +348,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
             padding: const EdgeInsets.only(right: AppSpace.sm),
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Save'),
+              child: Text(Strings.t('save')),
             ),
           ),
         ],
@@ -349,32 +363,32 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
               autofocus: !isEdit,
               textCapitalization: TextCapitalization.sentences,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-              decoration: const InputDecoration(hintText: 'Add title'),
-              validator: (value) => (value == null || value.trim().isEmpty) ? 'Please add a title' : null,
+              decoration: InputDecoration(hintText: Strings.t('add_title')),
+              validator: (value) => (value == null || value.trim().isEmpty) ? Strings.t('title_required') : null,
             ),
             const SizedBox(height: AppSpace.lg),
             _Section(
               children: [
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('All day'),
+                  title: Text(Strings.t('all_day')),
                   value: _allDay,
                   onChanged: _toggleAllDay,
                 ),
                 const Divider(height: AppSpace.xl),
                 _DateTimeRow(
-                  label: 'Starts',
+                  label: Strings.t('starts'),
                   dateText: DateFormat('EEE, MMM d, y').format(_start),
                   onDate: _pickStartDate,
-                  timeText: _allDay ? null : DateFormat.jm().format(_start),
+                  timeText: _allDay ? null : AppFormat.time(_start),
                   onTime: _allDay ? null : _pickStartTime,
                 ),
                 const SizedBox(height: AppSpace.sm),
                 _DateTimeRow(
-                  label: 'Ends',
+                  label: Strings.t('ends'),
                   dateText: DateFormat('EEE, MMM d, y').format(_displayEnd),
                   onDate: _pickEndDate,
-                  timeText: _allDay ? null : DateFormat.jm().format(_end),
+                  timeText: _allDay ? null : AppFormat.time(_end),
                   onTime: _allDay ? null : _pickEndTime,
                 ),
               ],
@@ -382,7 +396,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
             const SizedBox(height: AppSpace.md),
             _Section(
               children: [
-                _SectionLabel('Calendar'),
+                _SectionLabel(Strings.t('calendar')),
                 Wrap(
                   spacing: AppSpace.sm,
                   runSpacing: AppSpace.sm,
@@ -397,13 +411,13 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSpace.lg),
-                _SectionLabel('Colour'),
+                _SectionLabel(Strings.t('colour')),
                 Wrap(
                   spacing: AppSpace.md,
                   runSpacing: AppSpace.md,
                   children: [
                     ChoiceChip(
-                      label: const Text('Calendar colour'),
+                      label: Text(Strings.t('calendar_colour')),
                       selected: _colorValue == null,
                       onSelected: (_) => setState(() => _colorValue = null),
                     ),
@@ -423,17 +437,25 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
                 TextFormField(
                   controller: _locationCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(hintText: 'Add location', prefixIcon: Icon(Icons.place_outlined)),
+                  decoration: InputDecoration(
+                    hintText: Strings.t('add_location'),
+                    prefixIcon: const Icon(Icons.place_outlined),
+                  ),
                 ),
                 const SizedBox(height: AppSpace.md),
                 TextFormField(
                   controller: _notesCtrl,
                   minLines: 3,
                   maxLines: 6,
-                  decoration: const InputDecoration(hintText: 'Add notes', prefixIcon: Icon(Icons.notes_outlined)),
+                  decoration: InputDecoration(
+                    hintText: Strings.t('add_notes'),
+                    prefixIcon: const Icon(Icons.notes_outlined),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: AppSpace.md),
+            _Section(children: _reminderChildren(theme)),
             const SizedBox(height: AppSpace.md),
             _Section(children: _repeatChildren(theme)),
           ],
@@ -442,10 +464,37 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
     );
   }
 
+  List<Widget> _reminderChildren(ThemeData theme) {
+    return [
+      _SectionLabel(Strings.t('reminders')),
+      Wrap(
+        spacing: AppSpace.sm,
+        runSpacing: AppSpace.sm,
+        children: [
+          for (final m in _reminderPresets)
+            FilterChip(
+              avatar: const Icon(Icons.notifications_none, size: 16),
+              label: Text(Strings.leadLabel(m)),
+              selected: _reminders.contains(m),
+              onSelected: (on) {
+                setState(() {
+                  if (on) {
+                    _reminders.add(m);
+                  } else {
+                    _reminders.remove(m);
+                  }
+                });
+              },
+            ),
+        ],
+      ),
+    ];
+  }
+
   List<Widget> _repeatChildren(ThemeData theme) {
     final cs = theme.colorScheme;
     return [
-      _SectionLabel('Repeat'),
+      _SectionLabel(Strings.t('repeat')),
       Wrap(
         spacing: AppSpace.sm,
         runSpacing: AppSpace.sm,
@@ -462,8 +511,6 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
         const SizedBox(height: AppSpace.lg),
         Row(
           children: [
-            const Text('Every'),
-            const SizedBox(width: AppSpace.md),
             SizedBox(
               width: 72,
               child: TextField(
@@ -486,25 +533,27 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
                 FilterChip(
                   label: Text(DateFormat.E().format(DateTime(2024, 1, d))),
                   selected: _weekdays.contains(d),
-                  onSelected: (on) => setState(() {
-                    if (on) {
-                      _weekdays.add(d);
-                    } else {
-                      _weekdays.remove(d);
-                    }
-                  }),
+                  onSelected: (on) {
+                    setState(() {
+                      if (on) {
+                        _weekdays.add(d);
+                      } else {
+                        _weekdays.remove(d);
+                      }
+                    });
+                  },
                 ),
             ],
           ),
         ],
         const SizedBox(height: AppSpace.lg),
-        _SectionLabel('Ends'),
+        _SectionLabel(Strings.t('ends')),
         SegmentedButton<_Ends>(
           showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: _Ends.never, label: Text('Never')),
-            ButtonSegment(value: _Ends.onDate, label: Text('On date')),
-            ButtonSegment(value: _Ends.afterCount, label: Text('After')),
+          segments: [
+            ButtonSegment(value: _Ends.never, label: Text(Strings.t('ends_never'))),
+            ButtonSegment(value: _Ends.onDate, label: Text(Strings.t('ends_on'))),
+            ButtonSegment(value: _Ends.afterCount, label: Text(Strings.t('ends_after'))),
           ],
           selected: {_endsMode},
           onSelectionChanged: (s) => setState(() => _endsMode = s.first),
@@ -513,7 +562,9 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
           const SizedBox(height: AppSpace.md),
           ActionChip(
             avatar: const Icon(Icons.event_busy_outlined, size: 16),
-            label: Text(_untilDate == null ? 'Choose end date' : DateFormat('EEE, MMM d, y').format(_untilDate!)),
+            label: Text(_untilDate == null
+                ? Strings.t('choose_end')
+                : DateFormat('EEE, MMM d, y').format(_untilDate!)),
             onPressed: _pickUntilDate,
           ),
         ],
@@ -531,7 +582,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
                 ),
               ),
               const SizedBox(width: AppSpace.md),
-              const Text('occurrences'),
+              Text(Strings.t('occurrences')),
             ],
           ),
         ],
@@ -544,7 +595,7 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
       if (_isRecurringOccurrence) ...[
         const SizedBox(height: AppSpace.xs),
         Text(
-          "Changes to repeat apply when you choose 'This and following events'.",
+          Strings.t('repeat_hint'),
           style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
         ),
       ],
@@ -552,34 +603,42 @@ class _EventEditorScreenState extends State<EventEditorScreen> {
   }
 
   String _repeatLabel(_Repeat r) => switch (r) {
-        _Repeat.none => 'None',
-        _Repeat.daily => 'Daily',
-        _Repeat.weekly => 'Weekly',
-        _Repeat.monthly => 'Monthly',
-        _Repeat.yearly => 'Yearly',
+        _Repeat.none => Strings.t('repeat_none'),
+        _Repeat.daily => Strings.t('repeat_daily'),
+        _Repeat.weekly => Strings.t('repeat_weekly'),
+        _Repeat.monthly => Strings.t('repeat_monthly'),
+        _Repeat.yearly => Strings.t('repeat_yearly'),
       };
 
   String _unitWord() {
     final plural = _interval != 1;
     return switch (_repeat) {
-      _Repeat.daily => plural ? 'days' : 'day',
-      _Repeat.weekly => plural ? 'weeks' : 'week',
-      _Repeat.monthly => plural ? 'months' : 'month',
-      _Repeat.yearly => plural ? 'years' : 'year',
+      _Repeat.daily => Strings.t(plural ? 'unit_days' : 'unit_day'),
+      _Repeat.weekly => Strings.t(plural ? 'unit_weeks' : 'unit_week'),
+      _Repeat.monthly => Strings.t(plural ? 'unit_months' : 'unit_month'),
+      _Repeat.yearly => Strings.t(plural ? 'unit_years' : 'unit_year'),
       _Repeat.none => '',
     };
   }
 
   String _repeatSummary() {
-    if (_repeat == _Repeat.none) return 'Does not repeat';
-    final every = _interval == 1 ? 'Every ${_unitWord()}' : 'Every $_interval ${_unitWord()}';
+    if (_repeat == _Repeat.none) return Strings.t('does_not_repeat');
+    final every = _interval == 1
+        ? Strings.t('summary_one', {'unit': _unitWord()})
+        : Strings.t('summary_every', {'n': _interval, 'unit': _unitWord()});
+    final weekdayNames = ([..._weekdays]..sort())
+        .map((d) => DateFormat.E().format(DateTime(2024, 1, d)))
+        .join(', ');
     final days = _repeat == _Repeat.weekly
-        ? ' on ${([..._weekdays]..sort()).map((d) => DateFormat.E().format(DateTime(2024, 1, d))).join(', ')}'
+        ? ' · ${Strings.t('on_days', {'days': weekdayNames})}'
         : '';
+    final untilDate = _untilDate;
     final ends = switch (_endsMode) {
       _Ends.never => '',
-      _Ends.onDate => _untilDate == null ? '' : ', until ${DateFormat('MMM d, y').format(_untilDate!)}',
-      _Ends.afterCount => ', $_count times',
+      _Ends.onDate => untilDate == null
+          ? ''
+          : ' · ${Strings.t('until', {'date': DateFormat('MMM d, y').format(untilDate)})}',
+      _Ends.afterCount => ' · ${Strings.t('times', {'n': _count})}',
     };
     return '$every$days$ends';
   }

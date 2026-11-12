@@ -8,6 +8,7 @@ import '../data/models/event_model.dart';
 import '../data/models/occurrence.dart';
 import '../data/repositories/calendar_repository.dart';
 import '../data/repositories/event_repository.dart';
+import 'app_settings.dart';
 
 enum CalendarViewMode { day, week, month, agenda }
 
@@ -23,19 +24,29 @@ class CalendarController extends ChangeNotifier {
   final EventRepository _events;
   final CalendarRepository _calendars;
 
+  /// Called after every data change, so reminders can be rescheduled.
+  Future<void> Function(Set<String> calendarIds)? onDataChanged;
+
   DateTime _focus = startOfDay(DateTime.now());
   CalendarViewMode _view = CalendarViewMode.week;
   List<CalendarModel> _calendarList = const [];
   List<Occurrence> _occurrences = const [];
 
-  /// Monday = 1 ... Sunday = 7. Becomes a user setting in Phase 6.
-  final int firstWeekday = DateTime.monday;
+  /// Monday = 1 or Sunday = 7, from settings.
+  int get firstWeekday => AppSettings.instance.weekStart;
 
   DateTime get focusDate => _focus;
   CalendarViewMode get view => _view;
   List<CalendarModel> get calendars => _calendarList;
 
   Set<String> get visibleCalendarIds => {for (final c in _calendarList) if (c.isVisible) c.id};
+
+  String get defaultCalendarId {
+    for (final c in _calendarList) {
+      if (c.isDefault) return c.id;
+    }
+    return _calendarList.isEmpty ? 'cal_personal' : _calendarList.first.id;
+  }
 
   /// The window of dates the current view needs.
   (DateTime, DateTime) get visibleRange => switch (_view) {
@@ -64,7 +75,7 @@ class CalendarController extends ChangeNotifier {
 
   Future<void> init() async {
     _calendarList = await _calendars.all();
-    await reload();
+    await _changed();
   }
 
   Future<void> reload() async {
@@ -73,12 +84,34 @@ class CalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Reloads the view and tells listeners (reminders) that data changed.
+  Future<void> _changed() async {
+    await reload();
+    await onDataChanged?.call(visibleCalendarIds);
+  }
+
   List<Occurrence> occurrencesBetween(DateTime from, DateTime to) =>
       [for (final o in _occurrences) if (o.overlaps(from, to)) o];
 
   List<Occurrence> occurrencesOn(DateTime day) {
     final start = startOfDay(day);
     return occurrencesBetween(start, addDays(start, 1));
+  }
+
+  /// Finds events whose title, location or notes contain [query]. Covers one year either side of today.
+  Future<List<Occurrence>> search(String query) async {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+    final now = DateTime.now();
+    final all = await _events.occurrencesBetween(
+      from: addDays(now, -365),
+      to: addDays(now, 365),
+      calendarIds: visibleCalendarIds,
+    );
+    return [
+      for (final o in all)
+        if ([o.event.title, o.event.location, o.event.notes].any((s) => s.toLowerCase().contains(q))) o,
+    ];
   }
 
   // Navigation -----------------------------------------------------------
@@ -133,20 +166,20 @@ class CalendarController extends ChangeNotifier {
     } else {
       await _events.saveFollowing(original, draft);
     }
-    await reload();
+    await _changed();
   }
 
   Future<UndoAction> deleteOccurrence(Occurrence occ, RecurrenceScope scope) async {
     final undo = occ.isRecurring && scope == RecurrenceScope.thisAndFollowing
         ? await _events.deleteFollowing(occ)
         : await _events.deleteThisOccurrence(occ);
-    await reload();
+    await _changed();
     return undo;
   }
 
   Future<void> runUndo(UndoAction undo) async {
     await undo();
-    await reload();
+    await _changed();
   }
 
   // Calendars ------------------------------------------------------------
@@ -170,7 +203,6 @@ class CalendarController extends ChangeNotifier {
 
   Future<void> _refreshCalendars() async {
     _calendarList = await _calendars.all();
-    await reload();
+    await _changed();
   }
 }
-

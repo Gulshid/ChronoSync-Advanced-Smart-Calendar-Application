@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/strings.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_helpers.dart';
@@ -142,7 +143,7 @@ class _DayCell extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 4, top: 1),
                     child: Text(
-                      '+$hidden more',
+                      Strings.t('more_count', {'n': hidden}),
                       style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                     ),
                   ),

@@ -20,6 +20,7 @@ class EventModel {
     this.parentId,
     this.originalStart,
     this.isCancelled = false,
+    this.reminderMinutes = const [],
   });
 
   factory EventModel.draft({
@@ -52,6 +53,9 @@ class EventModel {
   final bool isCancelled;
   final DateTime updatedAt;
 
+  /// Minutes before the start to remind (0 = at the start). Empty = no reminders.
+  final List<int> reminderMinutes;
+
   EventModel copyWith({
     String? id,
     String? calendarId,
@@ -67,6 +71,7 @@ class EventModel {
     Object? originalStart = _keep,
     bool? isCancelled,
     DateTime? updatedAt,
+    List<int>? reminderMinutes,
   }) {
     return EventModel(
       id: id ?? this.id,
@@ -83,6 +88,7 @@ class EventModel {
       originalStart: _pick<DateTime>(originalStart, this.originalStart),
       isCancelled: isCancelled ?? this.isCancelled,
       updatedAt: updatedAt ?? DateTime.now(),
+      reminderMinutes: reminderMinutes ?? this.reminderMinutes,
     );
   }
 
@@ -103,11 +109,13 @@ class EventModel {
         'original_start_ms': originalStart?.toUtc().millisecondsSinceEpoch,
         'is_cancelled': isCancelled ? 1 : 0,
         'updated_ms': updatedAt.toUtc().millisecondsSinceEpoch,
+        'reminders': reminderMinutes.join(','),
       };
 
   factory EventModel.fromMap(Map<String, Object?> m) {
     DateTime fromMs(Object? ms) => DateTime.fromMillisecondsSinceEpoch(ms as int).toLocal();
     final originalMs = m['original_start_ms'] as int?;
+    final reminderText = (m['reminders'] as String?) ?? '';
     return EventModel(
       id: m['id'] as String,
       calendarId: m['calendar_id'] as String,
@@ -123,6 +131,10 @@ class EventModel {
       originalStart: originalMs == null ? null : fromMs(originalMs),
       isCancelled: (m['is_cancelled'] as int) == 1,
       updatedAt: fromMs(m['updated_ms']),
+      reminderMinutes: [
+        for (final part in reminderText.split(','))
+          if (int.tryParse(part) != null) int.parse(part),
+      ],
     );
   }
 }

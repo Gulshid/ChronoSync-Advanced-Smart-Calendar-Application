@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/occurrence.dart';
 import '../../data/repositories/event_repository.dart';
+import '../../l10n/strings.dart';
 import '../../state/calendar_controller.dart';
 import 'event_detail_sheet.dart';
 import 'event_editor_screen.dart';
 
-/// Opens the full-screen editor. Pass [occurrence] to edit, or [defaultStart] to create.
+/// Opens the full-screen editor.
+/// Pass [occurrence] to edit, or [defaultStart]/[defaultEnd] to create. [initialTitle] prefills from quick add.
 Future<void> openEventEditor(
   BuildContext context,
   CalendarController controller, {
   Occurrence? occurrence,
   DateTime? defaultStart,
+  DateTime? defaultEnd,
+  String? initialTitle,
+  bool initialAllDay = false,
 }) async {
   await Navigator.of(context).push<void>(
     MaterialPageRoute<void>(
@@ -20,6 +25,9 @@ Future<void> openEventEditor(
         controller: controller,
         occurrence: occurrence,
         defaultStart: defaultStart,
+        defaultEnd: defaultEnd,
+        initialTitle: initialTitle,
+        initialAllDay: initialAllDay,
       ),
     ),
   );
@@ -55,18 +63,18 @@ Future<RecurrenceScope?> askRecurrenceScope(BuildContext context, {required Stri
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-                child: Text('$verb repeating event', style: theme.textTheme.titleMedium),
+                child: Text(Strings.t('scope_title', {'verb': verb}), style: theme.textTheme.titleMedium),
               ),
               ListTile(
                 leading: const Icon(Icons.event_outlined),
-                title: const Text('This event'),
-                subtitle: const Text('Only this occurrence'),
+                title: Text(Strings.t('scope_this')),
+                subtitle: Text(Strings.t('scope_this_sub')),
                 onTap: () => Navigator.pop(sheetContext, RecurrenceScope.thisEvent),
               ),
               ListTile(
                 leading: const Icon(Icons.update),
-                title: const Text('This and following events'),
-                subtitle: const Text('This occurrence and all later ones'),
+                title: Text(Strings.t('scope_following')),
+                subtitle: Text(Strings.t('scope_following_sub')),
                 onTap: () => Navigator.pop(sheetContext, RecurrenceScope.thisAndFollowing),
               ),
             ],
@@ -81,7 +89,7 @@ Future<RecurrenceScope?> askRecurrenceScope(BuildContext context, {required Stri
 Future<UndoAction?> promptAndDelete(BuildContext context, CalendarController controller, Occurrence occ) async {
   var scope = RecurrenceScope.thisEvent;
   if (occ.isRecurring) {
-    final picked = await askRecurrenceScope(context, verb: 'Delete');
+    final picked = await askRecurrenceScope(context, verb: Strings.t('verb_delete'));
     if (picked == null) return null;
     scope = picked;
   }
@@ -93,8 +101,8 @@ void showUndoSnack(ScaffoldMessengerState messenger, CalendarController controll
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: const Text('Event deleted'),
-        action: SnackBarAction(label: 'Undo', onPressed: () => controller.runUndo(undo)),
+        content: Text(Strings.t('event_deleted')),
+        action: SnackBarAction(label: Strings.t('undo'), onPressed: () => controller.runUndo(undo)),
       ),
     );
 }
